@@ -58,6 +58,7 @@ func appMain(driver gxui.Driver) {
 				container.AddChild(window.createPaiImage(hai.Pai))
 			}
 		}
+		container.SetMargin(math.CreateSpacing(10))
 		containerBase.AddChild(container)
 	}
 
