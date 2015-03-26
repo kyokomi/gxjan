@@ -19,8 +19,6 @@ import (
 	"github.com/kyokomi/gomajan/taku"
 )
 
-var data = flag.String("data", "", "path to data")
-
 type MainWindow struct {
 	gxui.Window
 	theme gxui.Theme
@@ -46,10 +44,12 @@ func appMain(driver gxui.Driver) {
 	taku := taku.NewTaku()
 
 	containerBase := window.Theme().CreateLinearLayout()
-	containerBase.SetOrientation(gxui.Vertical)
+	containerBase.SetDirection(gxui.TopToBottom)
+	containerBase.SetVerticalAlignment(gxui.AlignTop)
 	for _, player := range taku.Players {
 		container := window.Theme().CreateLinearLayout()
-		container.SetOrientation(gxui.Horizontal)
+		container.SetDirection(gxui.LeftToRight)
+		container.SetHorizontalAlignment(gxui.AlignCenter)
 		for _, hai := range player.Tiles() {
 			if hai.Pai.Type() == pai.NoneType || hai.Val <= 0 {
 				continue
@@ -87,7 +87,6 @@ func (m MainWindow) createPaiImage(p pai.MJP) gxui.Image {
 
 	pict := m.theme.CreateImage()
 	texture := m.driver.CreateTexture(im, 96)
-	texture.SetFlipY(true)
 	pict.SetTexture(texture)
 	pict.SetExplicitSize(math.Size{32, 45})
 	//	pict.SetMargin(math.CreateSpacing(4))
@@ -97,5 +96,5 @@ func (m MainWindow) createPaiImage(p pai.MJP) gxui.Image {
 
 func main() {
 	flag.Parse()
-	gl.StartDriver(*data, appMain)
+	gl.StartDriver(appMain)
 }
