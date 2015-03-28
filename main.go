@@ -15,20 +15,21 @@ import (
 	"image"
 	"log"
 	"os"
+
 	"github.com/kyokomi/gomajan/pai"
 	"github.com/kyokomi/gomajan/taku"
 )
 
 type MainWindow struct {
 	gxui.Window
-	theme gxui.Theme
+	theme  gxui.Theme
 	driver gxui.Driver
 }
 
 func NewMainWindow(driver gxui.Driver) MainWindow {
 	var mainWindow MainWindow
 	theme := dark.CreateTheme(driver)
-	window := theme.CreateWindow(800, 600, "Polygon")
+	window := theme.CreateWindow(800, 800, "gxjan")
 
 	mainWindow.Window = window
 	mainWindow.theme = theme
@@ -43,30 +44,73 @@ func appMain(driver gxui.Driver) {
 
 	taku := taku.NewTaku()
 
-	containerBase := window.Theme().CreateLinearLayout()
-	containerBase.SetDirection(gxui.TopToBottom)
-	containerBase.SetVerticalAlignment(gxui.AlignTop)
-	for _, player := range taku.Players {
-		container := window.Theme().CreateLinearLayout()
-		container.SetDirection(gxui.LeftToRight)
-		container.SetHorizontalAlignment(gxui.AlignCenter)
-		for _, hai := range player.Tiles() {
-			if hai.Pai.Type() == pai.NoneType || hai.Val <= 0 {
-				continue
+	rootLayer := window.Theme().CreateLinearLayout()
+	rootLayer.SetDirection(gxui.TopToBottom)
+	rootLayer.SetVerticalAlignment(gxui.AlignTop)
+
+	{
+		tehaiLayer := window.Theme().CreateLinearLayout()
+		tehaiLayer.SetDirection(gxui.TopToBottom)
+		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
+		tehaiLayer.SetMargin(math.CreateSpacing(20))
+
+		for _, player := range taku.Players {
+			container := window.Theme().CreateLinearLayout()
+			container.SetDirection(gxui.LeftToRight)
+			container.SetHorizontalAlignment(gxui.AlignCenter)
+			for _, hai := range player.Tiles() {
+				if hai.Pai.Type() == pai.NoneType || hai.Val <= 0 {
+					continue
+				}
+				for i := 0; i < hai.Val; i++ {
+					container.AddChild(window.createPaiImage(hai.Pai))
+				}
 			}
-			for i := 0; i < hai.Val; i++ {
-				container.AddChild(window.createPaiImage(hai.Pai))
-			}
+			container.SetMargin(math.CreateSpacing(10))
+			tehaiLayer.AddChild(container)
 		}
-		container.SetMargin(math.CreateSpacing(10))
-		containerBase.AddChild(container)
+		rootLayer.AddChild(tehaiLayer)
 	}
 
-//	label := window.Theme().CreateLabel()
-//	label.SetText("hogehogehoge")
-//	label.SetMargin(math.CreateSpacing(200))
-//	container.AddChild(label)
-	window.AddChild(containerBase)
+	{
+		yamaLayer := window.Theme().CreateLinearLayout()
+		yamaLayer.SetDirection(gxui.TopToBottom)
+		yamaLayer.SetVerticalAlignment(gxui.AlignTop)
+		yamaLayer.SetMargin(math.CreateSpacing(20))
+
+		for i, 山2 := range taku.Yama {
+			container := window.Theme().CreateLinearLayout()
+			container.SetDirection(gxui.TopToBottom)
+			container.SetVerticalAlignment(gxui.AlignTop)
+			for j, 山 := range 山2 {
+				container2 := window.Theme().CreateLinearLayout()
+				container2.SetDirection(gxui.LeftToRight)
+				container2.SetHorizontalAlignment(gxui.AlignCenter)
+				for k, 牌 := range 山 {
+					if 牌.Type() == pai.NoneType {
+						continue
+					}
+
+					imagePai := window.createPaiImage(牌)
+					if taku.YamaMask[i][j][k] != 0 {
+						imagePai.SetVisible(false)
+					}
+					container2.AddChild(imagePai)
+				}
+				container2.SetMargin(math.CreateSpacing(1))
+				container.AddChild(container2)
+			}
+			container.SetMargin(math.CreateSpacing(4))
+			yamaLayer.AddChild(container)
+		}
+		rootLayer.AddChild(yamaLayer)
+	}
+
+	//	label := window.Theme().CreateLabel()
+	//	label.SetText("hogehogehoge")
+	//	label.SetMargin(math.CreateSpacing(200))
+	//	container.AddChild(label)
+	window.AddChild(rootLayer)
 	window.OnClose(driver.Terminate)
 	gxui.EventLoop(driver)
 }
