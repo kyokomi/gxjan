@@ -151,7 +151,7 @@ func (m MainWindow) createPaiImage(p pai.MJP) PaiImage {
 	return PaiImage{Image: pict, Pai: p}
 }
 
-var ueshita = 2
+var ueshita = 1 // ちょんちょん後の下段から
 
 func nextFunc(playerID int) pai.MJP {
 	if ueshita == 2 {
@@ -171,6 +171,7 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, player *player.Pla
 		container.RemoveChild(paiImage)
 
 		nextPai := nextFunc(player.PlayerID())
+		player.PaiInc(paiImage.Pai)
 		m.nextPaiImage(container, player, nextPai)
 	})
 	container.AddChild(paiImage)
