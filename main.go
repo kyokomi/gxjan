@@ -47,9 +47,10 @@ func appMain(driver gxui.Driver) {
 
 	_taku = taku.NewTaku()
 
-	rootLayer := window.Theme().CreateLinearLayout()
-	rootLayer.SetDirection(gxui.TopToBottom)
-	rootLayer.SetVerticalAlignment(gxui.AlignTop)
+	// TODO: Splitterにしてみた
+	rootLayer := window.Theme().CreateSplitterLayout()
+//	rootLayer.SetOrientation(gxui.TopToBottom)
+//	rootLayer.SetVerticalAlignment(gxui.AlignTop)
 
 	// 手牌
 	{
@@ -76,6 +77,7 @@ func appMain(driver gxui.Driver) {
 			tehaiLayer.AddChild(container)
 		}
 		rootLayer.AddChild(tehaiLayer)
+		rootLayer.SetChildWeight(tehaiLayer, 0.4)
 	}
 
 	// 山
@@ -111,6 +113,7 @@ func appMain(driver gxui.Driver) {
 			yamaLayer.AddChild(container)
 		}
 		rootLayer.AddChild(yamaLayer)
+		rootLayer.SetChildWeight(yamaLayer, 0.6)
 	}
 
 	//	label := window.Theme().CreateLabel()
@@ -174,6 +177,13 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, player *player.Pla
 		player.PaiInc(paiImage.Pai)
 		m.nextPaiImage(container, player, nextPai)
 	})
+
+	for i := 0; i < container.ChildCount(); i++ {
+		if container.ChildAt(i).(PaiImage).Pai > paiImage.Pai {
+			container.AddChildAt(i, paiImage)
+			return
+		}
+	}
 	container.AddChild(paiImage)
 }
 
