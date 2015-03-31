@@ -17,6 +17,7 @@ import (
 	"os"
 
 	"github.com/kyokomi/gomajan/pai"
+	"github.com/kyokomi/gomajan/player"
 	"github.com/kyokomi/gomajan/taku"
 )
 
@@ -38,32 +39,37 @@ func NewMainWindow(driver gxui.Driver) MainWindow {
 	return mainWindow
 }
 
+var _taku *taku.Taku
+
 func appMain(driver gxui.Driver) {
 
 	window := NewMainWindow(driver)
 
-	taku := taku.NewTaku()
+	_taku = taku.NewTaku()
 
 	rootLayer := window.Theme().CreateLinearLayout()
 	rootLayer.SetDirection(gxui.TopToBottom)
 	rootLayer.SetVerticalAlignment(gxui.AlignTop)
 
+	// 手牌
 	{
 		tehaiLayer := window.Theme().CreateLinearLayout()
 		tehaiLayer.SetDirection(gxui.TopToBottom)
 		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
 		tehaiLayer.SetMargin(math.CreateSpacing(20))
 
-		for _, player := range taku.Players {
+		for _, player := range _taku.Players {
 			container := window.Theme().CreateLinearLayout()
 			container.SetDirection(gxui.LeftToRight)
 			container.SetHorizontalAlignment(gxui.AlignCenter)
+
 			for _, hai := range player.Tiles() {
 				if hai.Pai.Type() == pai.NoneType || hai.Val <= 0 {
 					continue
 				}
+
 				for i := 0; i < hai.Val; i++ {
-					container.AddChild(window.createPaiImage(hai.Pai))
+					window.nextPaiImage(container, &player, hai.Pai)
 				}
 			}
 			container.SetMargin(math.CreateSpacing(10))
@@ -72,13 +78,14 @@ func appMain(driver gxui.Driver) {
 		rootLayer.AddChild(tehaiLayer)
 	}
 
+	// 山
 	{
 		yamaLayer := window.Theme().CreateLinearLayout()
 		yamaLayer.SetDirection(gxui.TopToBottom)
 		yamaLayer.SetVerticalAlignment(gxui.AlignTop)
 		yamaLayer.SetMargin(math.CreateSpacing(20))
 
-		for i, 山2 := range taku.Yama {
+		for i, 山2 := range _taku.Yama {
 			container := window.Theme().CreateLinearLayout()
 			container.SetDirection(gxui.TopToBottom)
 			container.SetVerticalAlignment(gxui.AlignTop)
@@ -92,7 +99,7 @@ func appMain(driver gxui.Driver) {
 					}
 
 					imagePai := window.createPaiImage(牌)
-					if taku.YamaMask[i][j][k] != 0 {
+					if _taku.YamaMask[i][j][k] != 0 {
 						imagePai.SetVisible(false)
 					}
 					container2.AddChild(imagePai)
@@ -119,7 +126,12 @@ func (m MainWindow) Theme() gxui.Theme {
 	return m.theme
 }
 
-func (m MainWindow) createPaiImage(p pai.MJP) gxui.Image {
+type PaiImage struct {
+	gxui.Image
+	Pai pai.MJP
+}
+
+func (m MainWindow) createPaiImage(p pai.MJP) PaiImage {
 	f, err := os.Open("data/pai-images/" + imageMappings[p])
 	if err != nil {
 		log.Fatalln(err)
@@ -136,7 +148,32 @@ func (m MainWindow) createPaiImage(p pai.MJP) gxui.Image {
 	pict.SetExplicitSize(math.Size{32, 45})
 	//	pict.SetMargin(math.CreateSpacing(4))
 
-	return pict
+	return PaiImage{Image: pict, Pai: p}
+}
+
+var ueshita = 2
+
+func nextFunc(playerID int) pai.MJP {
+	if ueshita == 2 {
+		_taku.Add列And山越しFunc(1)
+		ueshita = 0
+	}
+
+	p := _taku.Next(ueshita, playerID)
+	ueshita++
+	return p
+}
+
+func (m MainWindow) nextPaiImage(container gxui.LinearLayout, player *player.Player, p pai.MJP) {
+	paiImage := m.createPaiImage(p)
+	paiImage.OnClick(func(e gxui.MouseEvent) {
+		player.PaiDec(paiImage.Pai)
+		container.RemoveChild(paiImage)
+
+		nextPai := nextFunc(player.PlayerID())
+		m.nextPaiImage(container, player, nextPai)
+	})
+	container.AddChild(paiImage)
 }
 
 func main() {
