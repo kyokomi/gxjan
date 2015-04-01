@@ -40,6 +40,7 @@ func NewMainWindow(driver gxui.Driver) MainWindow {
 }
 
 var _taku *taku.Taku
+var _yamaImage [4][2][17]*PaiImage
 
 func appMain(driver gxui.Driver) {
 
@@ -104,6 +105,7 @@ func appMain(driver gxui.Driver) {
 					if _taku.YamaMask[i][j][k] != 0 {
 						imagePai.SetVisible(false)
 					}
+					_yamaImage[i][j][k] = &imagePai
 					container2.AddChild(imagePai)
 				}
 				container2.SetMargin(math.CreateSpacing(1))
@@ -154,7 +156,7 @@ func (m MainWindow) createPaiImage(p pai.MJP) PaiImage {
 	return PaiImage{Image: pict, Pai: p}
 }
 
-var ueshita = 1 // ちょんちょん後の下段から
+var ueshita = 1 // ちょんちょん後の下段からなので1
 
 func nextFunc(playerID int) pai.MJP {
 	if ueshita == 2 {
@@ -163,6 +165,10 @@ func nextFunc(playerID int) pai.MJP {
 	}
 
 	p := _taku.Next(ueshita, playerID)
+
+	// 引いた牌を非表示
+	_yamaImage[_taku.PlayYamaIndex][ueshita][_taku.PlayRetuIndex].SetVisible(false)
+
 	ueshita++
 	return p
 }
