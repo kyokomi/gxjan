@@ -23,6 +23,14 @@ import (
 	"github.com/kyokomi/gomajan/taku"
 )
 
+type State int
+
+const (
+	InitState       State = 0
+	PlayerTurnState State = 1
+	CPUTurnState    State = 2
+)
+
 type MainWindow struct {
 	gxui.Window
 	theme  gxui.Theme
@@ -41,29 +49,86 @@ func NewMainWindow(driver gxui.Driver) MainWindow {
 	return mainWindow
 }
 
+var _state State
 var _taku *taku.Taku
 var _yamaImage [4][2][17]*PaiImage
 
-func appMain(driver gxui.Driver) {
+var _playerContainer [4]gxui.LinearLayout
 
-	window := NewMainWindow(driver)
+func ChangeState(state State) {
+	beforeState := _state
+	_state = state
+
+	if beforeState == PlayerTurnState && state == CPUTurnState {
+		// playerTurn -> CPUTurn
+		EventCPU(2)
+		EventCPU(3)
+		EventCPU(4)
+		ChangeState(PlayerTurnState)
+	}
+}
+
+func NowState() State {
+	return _state
+}
+
+func EventCPU(playerID int) {
+	// 1枚引いて
+	mjPai := nextFunc(playerID)
+
+	// 1枚捨てる
+	p := Player(playerID)
+	p.PaiInc(mjPai)
+	_window.nextPaiImage(_playerContainer[playerID-1], playerID, mjPai)
+
+	yakuCheck := p.NewYakuCheck(mjPai)
+	if yakuCheck.Is和了() {
+		fmt.Println("アガリ: ", yakuCheck.String())
+		return
+	}
+	fmt.Println("チェック: ", yakuCheck.String())
+
+	for _, noko := range yakuCheck.MentsuCheck().Nokori() {
+		if noko.Pai.Type() == pai.NoneType || noko.Val == 0 {
+			continue
+		}
+
+		fmt.Println("捨てた牌: ", noko.Pai)
+		p.PaiDec(noko.Pai)
+
+		for i := 0; i < _playerContainer[playerID-1].ChildCount(); i++ {
+			if _playerContainer[playerID-1].ChildAt(i).(PaiImage).Pai == noko.Pai {
+				_playerContainer[playerID-1].RemoveChildAt(i)
+				break
+			}
+		}
+		break
+	}
+}
+
+var _window MainWindow
+
+func appMain(driver gxui.Driver) {
+	_window = NewMainWindow(driver)
+
+	ChangeState(InitState)
 
 	_taku = taku.NewTaku()
 
 	// TODO: Splitterにしてみた
-	rootLayer := window.Theme().CreateSplitterLayout()
+	rootLayer := _window.Theme().CreateSplitterLayout()
 	//	rootLayer.SetOrientation(gxui.TopToBottom)
 	//	rootLayer.SetVerticalAlignment(gxui.AlignTop)
 
 	// 手牌
 	{
-		tehaiLayer := window.Theme().CreateLinearLayout()
+		tehaiLayer := _window.Theme().CreateLinearLayout()
 		tehaiLayer.SetDirection(gxui.TopToBottom)
 		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
 		tehaiLayer.SetMargin(math.CreateSpacing(20))
 
 		for _, player := range _taku.Players {
-			container := window.Theme().CreateLinearLayout()
+			container := _window.Theme().CreateLinearLayout()
 			container.SetDirection(gxui.LeftToRight)
 			container.SetHorizontalAlignment(gxui.AlignCenter)
 
@@ -73,11 +138,12 @@ func appMain(driver gxui.Driver) {
 				}
 
 				for i := 0; i < hai.Val; i++ {
-					window.nextPaiImage(container, player.PlayerID(), hai.Pai)
+					_window.nextPaiImage(container, player.PlayerID(), hai.Pai)
 				}
 			}
 			container.SetMargin(math.CreateSpacing(10))
 			tehaiLayer.AddChild(container)
+			_playerContainer[player.PlayerID()-1] = container
 		}
 		rootLayer.AddChild(tehaiLayer)
 		rootLayer.SetChildWeight(tehaiLayer, 0.4)
@@ -85,17 +151,17 @@ func appMain(driver gxui.Driver) {
 
 	// 山
 	{
-		yamaLayer := window.Theme().CreateLinearLayout()
+		yamaLayer := _window.Theme().CreateLinearLayout()
 		yamaLayer.SetDirection(gxui.TopToBottom)
 		yamaLayer.SetVerticalAlignment(gxui.AlignTop)
 		yamaLayer.SetMargin(math.CreateSpacing(20))
 
 		for i, 山2 := range _taku.Yama {
-			container := window.Theme().CreateLinearLayout()
+			container := _window.Theme().CreateLinearLayout()
 			container.SetDirection(gxui.TopToBottom)
 			container.SetVerticalAlignment(gxui.AlignTop)
 			for j, 山 := range 山2 {
-				container2 := window.Theme().CreateLinearLayout()
+				container2 := _window.Theme().CreateLinearLayout()
 				container2.SetDirection(gxui.LeftToRight)
 				container2.SetHorizontalAlignment(gxui.AlignCenter)
 				for k, 牌 := range 山 {
@@ -103,7 +169,7 @@ func appMain(driver gxui.Driver) {
 						continue
 					}
 
-					imagePai := window.createPaiImage(牌)
+					imagePai := _window.createPaiImage(牌)
 					if _taku.YamaMask[i][j][k] != 0 {
 						imagePai.SetVisible(false)
 					}
@@ -124,8 +190,11 @@ func appMain(driver gxui.Driver) {
 	//	label.SetText("hogehogehoge")
 	//	label.SetMargin(math.CreateSpacing(200))
 	//	container.AddChild(label)
-	window.AddChild(rootLayer)
-	window.OnClose(driver.Terminate)
+	_window.AddChild(rootLayer)
+	_window.OnClose(driver.Terminate)
+
+	ChangeState(PlayerTurnState)
+
 	gxui.EventLoop(driver)
 }
 
@@ -184,13 +253,15 @@ func Player(playerID int) *player.Player {
 	return nil
 }
 
-func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, p pai.MJP) {
-	paiImage := m.createPaiImage(p)
+func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPai pai.MJP) {
+	paiImage := m.createPaiImage(mjPai)
 
 	fmt.Println("nextPaiImage", playerID)
 	// TODO: player1だけ操作可能にする
 	if playerID == 1 {
 		paiImage.OnClick(func(e gxui.MouseEvent) {
+			ChangeState(CPUTurnState)
+
 			fmt.Println("OnClick", playerID)
 
 			Player(playerID).PaiDec(paiImage.Pai)
