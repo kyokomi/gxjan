@@ -16,6 +16,8 @@ import (
 	"log"
 	"os"
 
+	"fmt"
+
 	"github.com/kyokomi/gomajan/pai"
 	"github.com/kyokomi/gomajan/player"
 	"github.com/kyokomi/gomajan/taku"
@@ -50,8 +52,8 @@ func appMain(driver gxui.Driver) {
 
 	// TODO: Splitterにしてみた
 	rootLayer := window.Theme().CreateSplitterLayout()
-//	rootLayer.SetOrientation(gxui.TopToBottom)
-//	rootLayer.SetVerticalAlignment(gxui.AlignTop)
+	//	rootLayer.SetOrientation(gxui.TopToBottom)
+	//	rootLayer.SetVerticalAlignment(gxui.AlignTop)
 
 	// 手牌
 	{
@@ -71,7 +73,7 @@ func appMain(driver gxui.Driver) {
 				}
 
 				for i := 0; i < hai.Val; i++ {
-					window.nextPaiImage(container, &player, hai.Pai)
+					window.nextPaiImage(container, player.PlayerID(), hai.Pai)
 				}
 			}
 			container.SetMargin(math.CreateSpacing(10))
@@ -173,16 +175,32 @@ func nextFunc(playerID int) pai.MJP {
 	return p
 }
 
-func (m MainWindow) nextPaiImage(container gxui.LinearLayout, player *player.Player, p pai.MJP) {
-	paiImage := m.createPaiImage(p)
-	paiImage.OnClick(func(e gxui.MouseEvent) {
-		player.PaiDec(paiImage.Pai)
-		container.RemoveChild(paiImage)
+func Player(playerID int) *player.Player {
+	for _, p := range _taku.Players {
+		if p.PlayerID() == playerID {
+			return &p
+		}
+	}
+	return nil
+}
 
-		nextPai := nextFunc(player.PlayerID())
-		player.PaiInc(paiImage.Pai)
-		m.nextPaiImage(container, player, nextPai)
-	})
+func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, p pai.MJP) {
+	paiImage := m.createPaiImage(p)
+
+	fmt.Println("nextPaiImage", playerID)
+	// TODO: player1だけ操作可能にする
+	if playerID == 1 {
+		paiImage.OnClick(func(e gxui.MouseEvent) {
+			fmt.Println("OnClick", playerID)
+
+			Player(playerID).PaiDec(paiImage.Pai)
+			container.RemoveChild(paiImage)
+
+			nextPai := nextFunc(playerID)
+			Player(playerID).PaiInc(paiImage.Pai)
+			m.nextPaiImage(container, playerID, nextPai)
+		})
+	}
 
 	for i := 0; i < container.ChildCount(); i++ {
 		if container.ChildAt(i).(PaiImage).Pai > paiImage.Pai {
