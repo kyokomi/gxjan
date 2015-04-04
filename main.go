@@ -40,7 +40,7 @@ type MainWindow struct {
 func NewMainWindow(driver gxui.Driver) MainWindow {
 	var mainWindow MainWindow
 	theme := dark.CreateTheme(driver)
-	window := theme.CreateWindow(800, 800, "gxjan")
+	window := theme.CreateWindow(1200, 800, "gxjan")
 
 	mainWindow.Window = window
 	mainWindow.theme = theme
@@ -122,6 +122,9 @@ func appMain(driver gxui.Driver) {
 
 	// 手牌
 	{
+		playLayer := _window.Theme().CreateSplitterLayout()
+		playLayer.SetOrientation(gxui.Horizontal)
+
 		tehaiLayer := _window.Theme().CreateLinearLayout()
 		tehaiLayer.SetDirection(gxui.TopToBottom)
 		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
@@ -145,8 +148,18 @@ func appMain(driver gxui.Driver) {
 			tehaiLayer.AddChild(container)
 			_playerContainer[player.PlayerID()-1] = container
 		}
-		rootLayer.AddChild(tehaiLayer)
-		rootLayer.SetChildWeight(tehaiLayer, 0.4)
+		playLayer.AddChild(tehaiLayer)
+		playLayer.SetChildWeight(tehaiLayer, 0.5)
+
+		sutehaiLayer := _window.Theme().CreateLinearLayout()
+		sutehaiLayer.SetDirection(gxui.TopToBottom)
+		sutehaiLayer.SetVerticalAlignment(gxui.AlignTop)
+		sutehaiLayer.SetMargin(math.CreateSpacing(20))
+		playLayer.AddChild(sutehaiLayer)
+		playLayer.SetChildWeight(sutehaiLayer, 0.5)
+
+		rootLayer.AddChild(playLayer)
+		rootLayer.SetChildWeight(playLayer, 0.4)
 	}
 
 	// 山
