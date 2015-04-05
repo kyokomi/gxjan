@@ -97,8 +97,10 @@ func EventCPU(playerID int) {
 		p.PaiDec(noko.Pai)
 
 		for i := 0; i < _playerContainer[playerID-1].ChildCount(); i++ {
-			if _playerContainer[playerID-1].ChildAt(i).(PaiImage).Pai == noko.Pai {
+			paiImage := _playerContainer[playerID-1].ChildAt(i).(PaiImage)
+			if paiImage.Pai == noko.Pai {
 				_playerContainer[playerID-1].RemoveChildAt(i)
+				_sutehaiLayers[playerID-1].AddChild(paiImage)
 				break
 			}
 		}
@@ -107,6 +109,7 @@ func EventCPU(playerID int) {
 }
 
 var _window MainWindow
+var _sutehaiLayers [4]gxui.LinearLayout
 
 func appMain(driver gxui.Driver) {
 	_window = NewMainWindow(driver)
@@ -130,6 +133,11 @@ func appMain(driver gxui.Driver) {
 		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
 		tehaiLayer.SetMargin(math.CreateSpacing(20))
 
+		sutehaiLayer := _window.Theme().CreateLinearLayout()
+		sutehaiLayer.SetDirection(gxui.TopToBottom)
+		sutehaiLayer.SetVerticalAlignment(gxui.AlignTop)
+		sutehaiLayer.SetMargin(math.CreateSpacing(20))
+
 		for _, player := range _taku.Players {
 			container := _window.Theme().CreateLinearLayout()
 			container.SetDirection(gxui.LeftToRight)
@@ -147,14 +155,18 @@ func appMain(driver gxui.Driver) {
 			container.SetMargin(math.CreateSpacing(10))
 			tehaiLayer.AddChild(container)
 			_playerContainer[player.PlayerID()-1] = container
+
+			suteContainer := _window.Theme().CreateLinearLayout()
+			suteContainer.SetDirection(gxui.LeftToRight)
+			suteContainer.SetHorizontalAlignment(gxui.AlignCenter)
+			suteContainer.SetMargin(math.CreateSpacing(10))
+
+			_sutehaiLayers[player.PlayerID()-1] = suteContainer
+			sutehaiLayer.AddChild(suteContainer)
 		}
 		playLayer.AddChild(tehaiLayer)
 		playLayer.SetChildWeight(tehaiLayer, 0.5)
 
-		sutehaiLayer := _window.Theme().CreateLinearLayout()
-		sutehaiLayer.SetDirection(gxui.TopToBottom)
-		sutehaiLayer.SetVerticalAlignment(gxui.AlignTop)
-		sutehaiLayer.SetMargin(math.CreateSpacing(20))
 		playLayer.AddChild(sutehaiLayer)
 		playLayer.SetChildWeight(sutehaiLayer, 0.5)
 
@@ -279,6 +291,8 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 
 			Player(playerID).PaiDec(paiImage.Pai)
 			container.RemoveChild(paiImage)
+
+			_sutehaiLayers[playerID-1].AddChild(paiImage)
 
 			nextPai := nextFunc(playerID)
 			Player(playerID).PaiInc(paiImage.Pai)
