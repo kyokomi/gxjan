@@ -295,7 +295,7 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 			_sutehaiLayers[playerID-1].AddChild(paiImage)
 
 			nextPai := nextFunc(playerID)
-			Player(playerID).PaiInc(paiImage.Pai)
+			Player(playerID).PaiInc(nextPai)
 			m.nextPaiImage(container, playerID, nextPai)
 		})
 	}
