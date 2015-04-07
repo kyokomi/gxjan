@@ -130,6 +130,13 @@ func appMain(driver gxui.Driver) {
 	//	rootLayer.SetOrientation(gxui.TopToBottom)
 	//	rootLayer.SetVerticalAlignment(gxui.AlignTop)
 
+	// TODO: メッセージ的なやつ出す
+	infoLayer := _window.Theme().CreateSplitterLayout()
+	infoLayer.SetOrientation(gxui.Horizontal)
+	infoLayer.AddChild(_window.createPaiImage(pai.HAK))
+	rootLayer.AddChild(infoLayer)
+	rootLayer.SetChildWeight(infoLayer, 0.05)
+
 	// 手牌
 	{
 		playLayer := _window.Theme().CreateSplitterLayout()
@@ -138,12 +145,12 @@ func appMain(driver gxui.Driver) {
 		tehaiLayer := _window.Theme().CreateLinearLayout()
 		tehaiLayer.SetDirection(gxui.TopToBottom)
 		tehaiLayer.SetVerticalAlignment(gxui.AlignTop)
-		tehaiLayer.SetMargin(math.CreateSpacing(20))
+		tehaiLayer.SetMargin(math.CreateSpacing(10))
 
 		sutehaiLayer := _window.Theme().CreateLinearLayout()
 		sutehaiLayer.SetDirection(gxui.TopToBottom)
 		sutehaiLayer.SetVerticalAlignment(gxui.AlignTop)
-		sutehaiLayer.SetMargin(math.CreateSpacing(20))
+		sutehaiLayer.SetMargin(math.CreateSpacing(10))
 
 		for _, player := range _taku.Players {
 			container := _window.Theme().CreateLinearLayout()
@@ -178,7 +185,7 @@ func appMain(driver gxui.Driver) {
 		playLayer.SetChildWeight(sutehaiLayer, 0.5)
 
 		rootLayer.AddChild(playLayer)
-		rootLayer.SetChildWeight(playLayer, 0.4)
+		rootLayer.SetChildWeight(playLayer, 0.35)
 	}
 
 	// 山
@@ -186,7 +193,7 @@ func appMain(driver gxui.Driver) {
 		yamaLayer := _window.Theme().CreateLinearLayout()
 		yamaLayer.SetDirection(gxui.TopToBottom)
 		yamaLayer.SetVerticalAlignment(gxui.AlignTop)
-		yamaLayer.SetMargin(math.CreateSpacing(20))
+		yamaLayer.SetMargin(math.CreateSpacing(10))
 
 		for i, 山2 := range _taku.Yama {
 			container := _window.Theme().CreateLinearLayout()
