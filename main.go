@@ -29,6 +29,7 @@ const (
 	InitState       State = 0
 	PlayerTurnState State = 1
 	CPUTurnState    State = 2
+	EndState        State = 3
 )
 
 type MainWindow struct {
@@ -65,7 +66,13 @@ func ChangeState(state State) {
 		EventCPU(3)
 		EventCPU(4)
 		ChangeState(PlayerTurnState)
+	} else if state == EndState {
+		fmt.Println("終了")
 	}
+}
+
+func GameEnd() bool {
+	return _state == EndState
 }
 
 func NowState() State {
@@ -285,9 +292,12 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 	// TODO: player1だけ操作可能にする
 	if playerID == 1 {
 		paiImage.OnClick(func(e gxui.MouseEvent) {
+			if GameEnd() {
+				return
+			}
 			ChangeState(CPUTurnState)
 
-			fmt.Println("OnClick", playerID)
+			fmt.Println("OnClick", playerID, paiImage.Pai)
 
 			Player(playerID).PaiDec(paiImage.Pai)
 			container.RemoveChild(paiImage)
@@ -307,6 +317,18 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 		}
 	}
 	container.AddChild(paiImage)
+
+	// TODO: 明かり判定
+	if playerID == 1 {
+		p := Player(playerID)
+		yakuCheck := p.NewYakuCheck(mjPai)
+		if yakuCheck.Is和了() {
+			fmt.Println("!!! Player アガリ: ", yakuCheck.String())
+			ChangeState(EndState)
+			return
+		}
+		fmt.Println("!!! Player チェック: ", yakuCheck.String())
+	}
 }
 
 func main() {
