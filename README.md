@@ -3,7 +3,7 @@ gxjan
 
 gxui Mahjong
 
-![haipai.png](https://qiita-image-store.s3.amazonaws.com/224/40887/053e5984-7ed5-74cb-b2f4-fd15276f2f6b.png "haipai.png")
+![gxjan.png](https://qiita-image-store.s3.amazonaws.com/224/40887/4fddbb46-db5d-2397-1d9e-77e4da5df76d.png "gxjan.png")
 
 ### 利用素材元
 
