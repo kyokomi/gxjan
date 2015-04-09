@@ -18,6 +18,8 @@ import (
 
 	"fmt"
 
+	"io/ioutil"
+
 	"github.com/kyokomi/gomajan/pai"
 	"github.com/kyokomi/gomajan/player"
 	"github.com/kyokomi/gomajan/taku"
@@ -30,6 +32,7 @@ const (
 	PlayerTurnState State = 1
 	CPUTurnState    State = 2
 	EndState        State = 3
+	PlayerEndState  State = 4
 )
 
 type MainWindow struct {
@@ -38,9 +41,21 @@ type MainWindow struct {
 	driver gxui.Driver
 }
 
+func inflate(filePath string) []byte {
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
 func NewMainWindow(driver gxui.Driver) MainWindow {
 	var mainWindow MainWindow
 	theme := dark.CreateTheme(driver)
+
+	// TODO: go-bindataかな
+	defaultFont, _ := driver.CreateFont(inflate("data/misaki_gothic.ttf"), 24)
+	theme.SetDefaultFont(defaultFont)
 	window := theme.CreateWindow(1200, 800, "gxjan")
 
 	mainWindow.Window = window
@@ -68,11 +83,14 @@ func ChangeState(state State) {
 		ChangeState(PlayerTurnState)
 	} else if state == EndState {
 		fmt.Println("終了")
+		playerMessage("終了", "")
+	} else if state == PlayerTurnState {
+		playerMessage("Player", "の番")
 	}
 }
 
 func GameEnd() bool {
-	return _state == EndState
+	return _state == EndState || _state == PlayerEndState
 }
 
 func NowState() State {
@@ -90,17 +108,18 @@ func EventCPU(playerID int) {
 
 	yakuCheck := p.NewYakuCheck(mjPai)
 	if yakuCheck.Is和了() {
-		fmt.Println("アガリ: ", yakuCheck.String())
+		fmt.Println("Enemy アガリ: ", yakuCheck.String())
+		ChangeState(EndState)
 		return
 	}
-	fmt.Println("チェック: ", yakuCheck.String())
+	//fmt.Println("チェック: ", yakuCheck.String())
 
 	for _, noko := range yakuCheck.MentsuCheck().Nokori() {
 		if noko.Pai.Type() == pai.NoneType || noko.Val == 0 {
 			continue
 		}
 
-		fmt.Println("捨てた牌: ", noko.Pai)
+		//fmt.Println("捨てた牌: ", noko.Pai)
 		p.PaiDec(noko.Pai)
 
 		for i := 0; i < _playerContainer[playerID-1].ChildCount(); i++ {
@@ -115,8 +134,17 @@ func EventCPU(playerID int) {
 	}
 }
 
+var _infoLabel gxui.Label
 var _window MainWindow
 var _sutehaiLayers [4]gxui.LinearLayout
+
+func playerMessage(name string, message string) {
+	msg := fmt.Sprintf("東%d局 ドラ %s %d本場 %s %s", 1, _taku.Dora()[0], 0, name, message)
+	setInfoLabel(msg)
+}
+func setInfoLabel(text string) {
+	_infoLabel.SetText(text)
+}
 
 func appMain(driver gxui.Driver) {
 	_window = NewMainWindow(driver)
@@ -133,9 +161,20 @@ func appMain(driver gxui.Driver) {
 	// TODO: メッセージ的なやつ出す
 	infoLayer := _window.Theme().CreateSplitterLayout()
 	infoLayer.SetOrientation(gxui.Horizontal)
-	infoLayer.AddChild(_window.createPaiImage(pai.HAK))
+	{
+		layer := _window.Theme().CreateLinearLayout()
+		layer.SetDirection(gxui.TopToBottom)
+		layer.SetVerticalAlignment(gxui.AlignTop)
+		layer.SetMargin(math.CreateSpacing(10))
+
+		label := _window.Theme().CreateLabel()
+		label.SetText("hogehogehoge")
+		layer.AddChild(label)
+		infoLayer.AddChild(layer)
+		_infoLabel = label
+	}
 	rootLayer.AddChild(infoLayer)
-	rootLayer.SetChildWeight(infoLayer, 0.05)
+	rootLayer.SetChildWeight(infoLayer, 0.07)
 
 	// 手牌
 	{
@@ -225,10 +264,6 @@ func appMain(driver gxui.Driver) {
 		rootLayer.SetChildWeight(yamaLayer, 0.6)
 	}
 
-	//	label := window.Theme().CreateLabel()
-	//	label.SetText("hogehogehoge")
-	//	label.SetMargin(math.CreateSpacing(200))
-	//	container.AddChild(label)
 	_window.AddChild(rootLayer)
 	_window.OnClose(driver.Terminate)
 
@@ -295,7 +330,7 @@ func Player(playerID int) *player.Player {
 func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPai pai.MJP) {
 	paiImage := m.createPaiImage(mjPai)
 
-	fmt.Println("nextPaiImage", playerID)
+	fmt.Println("nextPaiImage playerID = ", playerID)
 	// TODO: player1だけ操作可能にする
 	if playerID == 1 {
 		paiImage.OnClick(func(e gxui.MouseEvent) {
@@ -317,13 +352,18 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 		})
 	}
 
+	isAdded := false
 	for i := 0; i < container.ChildCount(); i++ {
 		if container.ChildAt(i).(PaiImage).Pai > paiImage.Pai {
 			container.AddChildAt(i, paiImage)
-			return
+			isAdded = true
+			break
 		}
 	}
-	container.AddChild(paiImage)
+
+	if !isAdded {
+		container.AddChild(paiImage)
+	}
 
 	// TODO: 明かり判定
 	if playerID == 1 {
@@ -331,10 +371,11 @@ func (m MainWindow) nextPaiImage(container gxui.LinearLayout, playerID int, mjPa
 		yakuCheck := p.NewYakuCheck(mjPai)
 		if yakuCheck.Is和了() {
 			fmt.Println("!!! Player アガリ: ", yakuCheck.String())
-			ChangeState(EndState)
-			return
+			playerMessage("Player", "ツモ" + fmt.Sprintf("%s", yakuCheck.Yakus()))
+			ChangeState(PlayerEndState)
+		} else {
+			fmt.Println("!!! Player チェック: ", yakuCheck.String())
 		}
-		fmt.Println("!!! Player チェック: ", yakuCheck.String())
 	}
 }
 
